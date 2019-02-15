@@ -52,71 +52,74 @@ router.get('/actions/:id', (req, res) => {
 //************************** ADD NEW PROJECT *************************/
 router.post('/', (req, res) => {
   const { name, description } = req.body;
+  const newProject = { name, description };
 
-  if (!name || !description) {
-    res
-      .status(422)
-      .json({ errorMessage: 'Name and Description Required to add a project' });
-  } else {
-    Projects.insert({ name, description })
-      .then(res => {
-        if (res) {
-          Projects.get().then(project => {
-            res.json(project);
-          });
-        }
-      })
-      .catch(() => res.status(500).json({ error: 'Server Error' }));
+  if (!newProject) {
+    return res
+      .status(417)
+      .json({
+        errorMessage: 'Name and Description Required to add a project.',
+      });
   }
+
+  Projects.insert(newProject)
+    .then(project => {
+      res.status(200).json({ newProject, project });
+    })
+    .catch(err => {
+      res.status(500).json({ error: 'The Project could not be saved.' });
+    });
 });
 
 //************************** UPDATE PROJECT *************************/
 router.put('/:id', (req, res) => {
-  const { name, description } = req.body;
 
-  if (!name || !description) {
-    res.status(422).json({ errorMessage: 'Name and Description Required' });
-  } else {
-    Projects.get(req.params.id)
-      .then(project => {
-        if (project) {
-          Projects.update(req.params.id, { name, description }).then(res => {
-            if (res) {
-              Projects.get().then(project => {
-                es.json({ message: 'User updated', project });
-              });
-            } else {
-              res
-                .status(404)
-                .json({
-                  errorMessage:
-                    'The project with the specified ID does not exist.',
-                });
-            }
-          });
-        } else {
-          res.status(404).json({ errorMessage: 'Project Not Found' });
-        }
-      })
-      .catch(() =>
+  const id = req.params.id;
+  const { name, description } = req.body;
+  const updateProject = { name, description };
+
+  Projects.update(id, updateProject)
+    .then(updatedProject => {
+      if (!updatedProject) {
         res
-          .status(500)
-          .json({ error: 'The user information could not be modified.' }),
-      );
-  }
+          .status(404)
+          .json({
+            message: 'The Project with the specified ID does not exist.',
+          });
+      } else if (!req.body) {
+        res
+          .status(417)
+          .json({
+            errorMessage:
+              'Please insert Description and Name for this Project.',
+          });
+      } else {
+        res.status(200).json({ message: 'Project updated', updatedProject });
+      }
+    })
+    .catch(err => {
+      res.status(500).json({ error: 'The Project could not be updated' });
+    });
 });
 
 //************************** DELETE PROJECT *************************/
 router.delete('/:id', (req, res) => {
-  Projects.remove(req.params.id)
-    .then(res => {
-      if (res) {
-        Projects.get().then(deleted => res.json(deleted));
-      } else {
-        res.status(500).json({ errorMessage: 'Failed to delete project' });
-      }
-    })
-    .catch(() => res.status(500).json({ error: 'Server Error' }));
-});
-
+    const id = req.params.id;
+  
+    Projects.remove(id)
+      .then(deleted => {
+        if (!deleted) {
+          res
+            .status(404)
+            .json({
+              message: 'The project with the specified ID does not exist.',
+            });
+        } else {
+          res.status(200).json({ message: 'Project Deleted!', deleted });
+        }
+      })
+      .catch(() => {
+        res.status(500).json({ message: 'The Project could not be deleted' });
+      });
+  });
 module.exports = router;

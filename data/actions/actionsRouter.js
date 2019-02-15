@@ -68,42 +68,54 @@ router.post('/', (req, res) => {
 });
 
 //************************** UPDATE ACTION *************************/
-router.put("/:id", (req, res) => {
-    const { notes, description } = req.body;
-    if (!description || !notes) {
-      res.status(422).json({ message: "Description and Notes are required" });
-    } else {
-      Actions.update(req.param.id, { notes, description })
-        .then(res => {
-          if (res) {
-            Actions.get().then(action => {
-              res.json(action);
-            });
-          } else {
-            res.status(404).json({ message: "Actions Update Failed." });
-          }
-        })
-        .catch(() => {
-          res.status(500).json({ message: "The Action could not be updated" });
-        });
-    }
-  });
+router.put('/:id', (req, res) => {
+  const id = req.params.id;
+  const { notes, description } = req.body;
+  const updateAction = { notes, description };
+
+  Actions.update(id, updateAction)
+    .then(updatedAction => {
+      if (!updatedAction) {
+        res
+          .status(404)
+          .json({
+            message: 'The Action with the specified ID does not exist.',
+          });
+      } else if (!req.body) {
+        res
+          .status(417)
+          .json({
+            errorMessage:
+              'Please insert Description and Notes for this action.',
+          });
+      } else {
+        res.status(200).json({ message: 'Action updated', updatedAction });
+      }
+    })
+    .catch(err => {
+      res.status(500).json({ error: 'The Action could not be updated' });
+    });
+});
 
 //************************** DELETE ACTION *************************/
-router.delete("/:id", (req, res) => {
-    Actions.remove(req.params.id)
-      .then(res => {
-        if (res) {
-          Actions.get().then(action => {
-            res.json(action);
+router.delete('/:id', (req, res) => {
+  const id = req.params.id;
+
+  Actions.remove(id)
+    .then(deleted => {
+      if (!deleted) {
+        res
+          .status(404)
+          .json({
+            message: 'The action with the specified ID does not exist.',
           });
-        } else {
-          res.status(400).json({ message: `Failed to delete action with id ${req.params.id}` });
-        }
-      })
-      .catch(() => {
-        res.status(500).json({ message: "The Action could not be deleted" });
-      });
-  });
+      } else {
+        res.status(200).json({ message: 'Action Deleted!', deleted });
+      }
+    })
+    .catch(() => {
+      res.status(500).json({ message: 'The Action could not be deleted' });
+    });
+});
 
 module.exports = router;
